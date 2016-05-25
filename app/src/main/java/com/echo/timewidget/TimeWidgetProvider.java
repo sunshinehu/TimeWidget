@@ -98,8 +98,8 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         int time1=daysBetween(calendar1.getTime(),new Date());
         int time2=daysBetween(calendar2.getTime(),new Date());
-        remoteViews.setTextViewText(R.id.day1,time1+"");
-        remoteViews.setTextViewText(R.id.day2,time2+"");
+        remoteViews.setTextViewText(R.id.day1,time1+1+"");
+        remoteViews.setTextViewText(R.id.day2,time2+1+"");
 
     }
 
