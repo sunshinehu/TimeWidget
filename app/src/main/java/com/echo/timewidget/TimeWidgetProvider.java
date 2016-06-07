@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v8.renderscript.Allocation;
 import android.support.v8.renderscript.RenderScript;
 import android.support.v8.renderscript.ScriptIntrinsicBlur;
@@ -18,6 +19,9 @@ import android.widget.RemoteViews;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,8 +37,6 @@ import java.util.Date;
 public class TimeWidgetProvider extends AppWidgetProvider {
 
 
-    private Bitmap bkg;
-    private volatile boolean changed=true;
 
 
     public TimeWidgetProvider() {
@@ -44,6 +46,8 @@ public class TimeWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+
+        Log.d("life","receive");
 
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(),R.layout.time_widget_layout);
 
@@ -67,27 +71,19 @@ public class TimeWidgetProvider extends AppWidgetProvider {
     public void onUpdate(final Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
+        Log.d("life","update");
 
         RemoteViews remoteViews = new RemoteViews(context.getPackageName(),R.layout.time_widget_layout);
 
         updateTextView(remoteViews);
 
-        if(changed) {
-            Log.d("updateview","update");
-            updateBackView(context, remoteViews);
-            changed=false;
-        }
 
-        //相当于获得所有本程序创建的appwidget
-        ComponentName componentName = new ComponentName(context,TimeWidgetProvider.class);
-
-        //更新appwidget
-        appWidgetManager.updateAppWidget(componentName, remoteViews);
 
         final SharedPreferences sharedPreferences= context.getSharedPreferences("echo",
             Context.MODE_PRIVATE);
         final int day=sharedPreferences.getInt("date",-1);
         final int current=Calendar.getInstance().get(Calendar.DATE);
+
         if(current!=day){
 
             new Thread(){
@@ -96,19 +92,56 @@ public class TimeWidgetProvider extends AppWidgetProvider {
                 public void run() {
                     super.run();
                     Log.d("Download","start");
-                    bkg = GetLocalOrNetBitmap("http://www.dujin.org/sys/bing/1366.php");
+                    Bitmap bkg = GetLocalOrNetBitmap("http://www.dujin.org/sys/bing/1920.php");
+
                     if(bkg!=null){
+
+                        File file = new File(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
+
+                        if(file.exists()){
+                            file.delete();
+                        }
+
+                        try {
+                            OutputStream os=new FileOutputStream(file);
+                            bkg.compress(Bitmap.CompressFormat.JPEG, 100, os);
+                            os.flush();
+                            os.close();
+                        } catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                            return;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+
                         Log.d("GETBitmap","ok");
                         SharedPreferences.Editor editor=sharedPreferences.edit();
                         editor.putInt("date",current);
+                        editor.putBoolean("flag",true);
                         editor.apply();
-                        changed=true;
                     }
                 }
 
             }.start();
 
+            boolean flag=sharedPreferences.getBoolean("flag",true);
+            if(flag && updateBackView(context,remoteViews)){
+                SharedPreferences.Editor editor=sharedPreferences.edit();
+                editor.putBoolean("flag",false);
+                editor.apply();
+            }
+
+
         }
+
+
+        //相当于获得所有本程序创建的appwidget
+        ComponentName componentName = new ComponentName(context,TimeWidgetProvider.class);
+
+        //更新appwidget
+        appWidgetManager.updateAppWidget(componentName, remoteViews);
+
 
 
 
@@ -198,11 +231,16 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
 
 
-    private void updateBackView(Context context,RemoteViews remoteViews){
+    private boolean updateBackView(Context context,RemoteViews remoteViews){
+
+        Bitmap bkg=BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
+        if(bkg!=null) {
+            bkg =bkg.copy(Bitmap.Config.ARGB_8888, true);
+        }
 
         if(bkg==null){
             Log.d("updateview","empty");
-            return;
+            return false;
         }
 
         Canvas canvas = new Canvas(bkg);
@@ -220,7 +258,7 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         blur.setInput(overlayAlloc);
 
-        blur.setRadius(25);
+        blur.setRadius(20);
 
         blur.forEach(overlayAlloc);
 
@@ -230,6 +268,7 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         rs.destroy();
 
+        return true;
 
     }
 
