@@ -125,14 +125,21 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
             }.start();
 
-            boolean flag=sharedPreferences.getBoolean("flag",true);
-            if(flag && updateBackView(context,remoteViews)){
-                SharedPreferences.Editor editor=sharedPreferences.edit();
-                editor.putBoolean("flag",false);
-                editor.apply();
-            }
+        }
 
 
+        boolean flag=sharedPreferences.getBoolean("flag",true);
+
+        Log.d("updateView","flag"+flag);
+
+
+        if(flag && updateBackView(context,remoteViews)){
+
+            Log.d("updateView","success");
+
+            SharedPreferences.Editor editor=sharedPreferences.edit();
+            editor.putBoolean("flag",false);
+            editor.apply();
         }
 
 
@@ -233,6 +240,8 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
     private boolean updateBackView(Context context,RemoteViews remoteViews){
 
+        Log.d("updateView","start update");
+
         Bitmap bkg=BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
         if(bkg!=null) {
             bkg =bkg.copy(Bitmap.Config.ARGB_8888, true);
@@ -267,6 +276,8 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         remoteViews.setBitmap(R.id.back,"setImageBitmap",bkg);
 
         rs.destroy();
+
+        Log.d("updateView","update finish");
 
         return true;
 
