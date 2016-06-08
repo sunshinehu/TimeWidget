@@ -1,5 +1,6 @@
 package com.echo.timewidget;
 
+import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
@@ -37,11 +38,12 @@ import java.util.Date;
 public class TimeWidgetProvider extends AppWidgetProvider {
 
 
-
-
     public TimeWidgetProvider() {
         super();
     }
+
+
+
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -267,7 +269,7 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         blur.setInput(overlayAlloc);
 
-        blur.setRadius(20);
+        blur.setRadius(15);
 
         blur.forEach(overlayAlloc);
 
