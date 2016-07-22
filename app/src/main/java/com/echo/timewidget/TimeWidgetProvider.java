@@ -99,13 +99,10 @@ public class TimeWidgetProvider extends AppWidgetProvider {
                     if(bkg!=null){
 
                         File file = new File(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
-
-                        if(file.exists()){
-                            file.delete();
-                        }
+                        File newFile =  new File(Environment.getExternalStorageDirectory().getPath()+"/newwallpaper");
 
                         try {
-                            OutputStream os=new FileOutputStream(file);
+                            OutputStream os=new FileOutputStream(newFile);
                             bkg.compress(Bitmap.CompressFormat.JPEG, 100, os);
                             os.flush();
                             os.close();
@@ -122,6 +119,15 @@ public class TimeWidgetProvider extends AppWidgetProvider {
                         editor.putInt("date",current);
                         editor.putBoolean("flag",true);
                         editor.apply();
+
+                        if(newFile.exists()){
+                            if(file.exists()) {
+                                file.delete();
+                            }
+                            newFile.renameTo(file);
+                        }
+
+
                     }
                 }
 
