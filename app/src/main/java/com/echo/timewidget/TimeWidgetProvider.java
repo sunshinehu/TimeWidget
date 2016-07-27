@@ -37,72 +37,61 @@ import java.util.Date;
  */
 public class TimeWidgetProvider extends AppWidgetProvider {
 
-
     public TimeWidgetProvider() {
         super();
     }
-
-
-
 
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
 
-        Log.d("life","receive");
+        Log.d("life", "receive");
 
-        RemoteViews remoteViews = new RemoteViews(context.getPackageName(),R.layout.time_widget_layout);
+        RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.time_widget_layout);
 
         updateTextView(remoteViews);
-
 
         //获得appwidget管理实例，用于管理appwidget以便进行更新操作
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 
         //相当于获得所有本程序创建的appwidget
-        ComponentName componentName = new ComponentName(context,TimeWidgetProvider.class);
+        ComponentName componentName = new ComponentName(context, TimeWidgetProvider.class);
 
         //更新appwidget
         appWidgetManager.updateAppWidget(componentName, remoteViews);
-
-
-
     }
 
     @Override
     public void onUpdate(final Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
-        Log.d("life","update");
+        Log.d("life", "update");
 
-        RemoteViews remoteViews = new RemoteViews(context.getPackageName(),R.layout.time_widget_layout);
+        RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.time_widget_layout);
 
         updateTextView(remoteViews);
 
+        final SharedPreferences sharedPreferences = context.getSharedPreferences("echo", Context.MODE_PRIVATE);
+        final int day = sharedPreferences.getInt("date", -1);
+        final int current = Calendar.getInstance().get(Calendar.DATE);
 
+        if (current != day) {
 
-        final SharedPreferences sharedPreferences= context.getSharedPreferences("echo",
-            Context.MODE_PRIVATE);
-        final int day=sharedPreferences.getInt("date",-1);
-        final int current=Calendar.getInstance().get(Calendar.DATE);
-
-        if(current!=day){
-
-            new Thread(){
+            new Thread() {
 
                 @Override
                 public void run() {
                     super.run();
-                    Log.d("Download","start");
+                    Log.d("Download", "start");
                     Bitmap bkg = GetLocalOrNetBitmap("http://www.dujin.org/sys/bing/1920.php");
 
-                    if(bkg!=null){
+                    if (bkg != null) {
 
-                        File file = new File(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
-                        File newFile =  new File(Environment.getExternalStorageDirectory().getPath()+"/newwallpaper");
+                        File file = new File(Environment.getExternalStorageDirectory().getPath() + "/wallpaper");
+                        File newFile = new File(Environment.getExternalStorageDirectory().getPath() + "/newwallpaper");
 
                         try {
-                            OutputStream os=new FileOutputStream(newFile);
+                            OutputStream os = new FileOutputStream(newFile);
                             bkg.compress(Bitmap.CompressFormat.JPEG, 100, os);
                             os.flush();
                             os.close();
@@ -114,58 +103,47 @@ public class TimeWidgetProvider extends AppWidgetProvider {
                             return;
                         }
 
-                        Log.d("GETBitmap","ok");
-                        SharedPreferences.Editor editor=sharedPreferences.edit();
-                        editor.putInt("date",current);
-                        editor.putBoolean("flag",true);
+                        Log.d("GETBitmap", "ok");
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putInt("date", current);
+                        editor.putBoolean("flag", true);
                         editor.apply();
 
-                        if(newFile.exists()){
-                            if(file.exists()) {
+                        if (newFile.exists()) {
+                            if (file.exists()) {
                                 file.delete();
                             }
                             newFile.renameTo(file);
                         }
-
-
                     }
                 }
-
             }.start();
-
         }
 
+        boolean flag = sharedPreferences.getBoolean("flag", true);
 
-        boolean flag=sharedPreferences.getBoolean("flag",true);
+        Log.d("updateView", "flag" + flag);
 
-        Log.d("updateView","flag"+flag);
+        if (flag && updateBackView(context, remoteViews)) {
 
+            Log.d("updateView", "success");
 
-        if(flag && updateBackView(context,remoteViews)){
-
-            Log.d("updateView","success");
-
-            SharedPreferences.Editor editor=sharedPreferences.edit();
-            editor.putBoolean("flag",false);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean("flag", false);
             editor.apply();
         }
 
-
         //相当于获得所有本程序创建的appwidget
-        ComponentName componentName = new ComponentName(context,TimeWidgetProvider.class);
+        ComponentName componentName = new ComponentName(context, TimeWidgetProvider.class);
 
         //更新appwidget
         appWidgetManager.updateAppWidget(componentName, remoteViews);
-
-
-
-
     }
 
     @Override
-    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId,
+        Bundle newOptions) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
-
     }
 
     @Override
@@ -188,35 +166,28 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         super.onRestored(context, oldWidgetIds, newWidgetIds);
     }
 
-
-
-    private void updateTextView(RemoteViews remoteViews){
+    private void updateTextView(RemoteViews remoteViews) {
 
         //Time 1 February 12
         //Time 2 Apr 12
         //Time 3 Apr 16
         //Time 4 Apr 24
-        Calendar calendar1=Calendar.getInstance();
-        calendar1.set(2016,1,12);
-        Calendar calendar2=Calendar.getInstance();
-        calendar2.set(2016,3,12);
+        Calendar calendar1 = Calendar.getInstance();
+        calendar1.set(2016, 1, 12);
+        Calendar calendar2 = Calendar.getInstance();
+        calendar2.set(2016, 3, 12);
 
-        int time1=daysBetween(calendar1.getTime(),new Date());
-        int time2=daysBetween(calendar2.getTime(),new Date());
-        remoteViews.setTextViewText(R.id.day1,time1+1+"");
-        remoteViews.setTextViewText(R.id.day2," & "+(time2+1));
-
-
+        int time1 = daysBetween(calendar1.getTime(), new Date());
+        int time2 = daysBetween(calendar2.getTime(), new Date());
+        remoteViews.setTextViewText(R.id.day1, time1 + 1 + "");
+        remoteViews.setTextViewText(R.id.day2, " & " + (time2 + 1));
     }
 
-
-    public static Bitmap GetLocalOrNetBitmap(String url)
-    {
+    public static Bitmap GetLocalOrNetBitmap(String url) {
         Bitmap bitmap = null;
         InputStream in = null;
         BufferedOutputStream out = null;
-        try
-        {
+        try {
             in = new BufferedInputStream(new URL(url).openStream(), 1024);
             final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
             out = new BufferedOutputStream(dataStream, 1024);
@@ -225,17 +196,13 @@ public class TimeWidgetProvider extends AppWidgetProvider {
             byte[] data = dataStream.toByteArray();
             bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             return bitmap;
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
-
-    private static void copy(InputStream in, OutputStream out)
-        throws IOException {
+    private static void copy(InputStream in, OutputStream out) throws IOException {
         byte[] b = new byte[1024];
         int read;
         while ((read = in.read(b)) != -1) {
@@ -243,20 +210,17 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    private boolean updateBackView(Context context, RemoteViews remoteViews) {
 
+        Log.d("updateView", "start update");
 
-
-    private boolean updateBackView(Context context,RemoteViews remoteViews){
-
-        Log.d("updateView","start update");
-
-        Bitmap bkg=BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath()+"/wallpaper");
-        if(bkg!=null) {
-            bkg =bkg.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap bkg = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath() + "/wallpaper");
+        if (bkg != null) {
+            bkg = bkg.copy(Bitmap.Config.ARGB_8888, true);
         }
 
-        if(bkg==null){
-            Log.d("updateview","empty");
+        if (bkg == null) {
+            Log.d("updateview", "empty");
             return false;
         }
 
@@ -267,11 +231,9 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         RenderScript rs = RenderScript.create(context);
 
-        Allocation overlayAlloc = Allocation.createFromBitmap(
-            rs, bkg);
+        Allocation overlayAlloc = Allocation.createFromBitmap(rs, bkg);
 
-        ScriptIntrinsicBlur blur = ScriptIntrinsicBlur.create(
-            rs, overlayAlloc.getElement());
+        ScriptIntrinsicBlur blur = ScriptIntrinsicBlur.create(rs, overlayAlloc.getElement());
 
         blur.setInput(overlayAlloc);
 
@@ -281,33 +243,28 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
         overlayAlloc.copyTo(bkg);
 
-        remoteViews.setBitmap(R.id.back,"setImageBitmap",bkg);
+        remoteViews.setBitmap(R.id.back, "setImageBitmap", bkg);
 
         rs.destroy();
 
-        Log.d("updateView","update finish");
+        Log.d("updateView", "update finish");
 
         return true;
-
     }
-
-
-
-
 
     /**
      * 计算两个日期之间相差的天数
+     *
      * @param smdate 较小的时间
-     * @param bdate  较大的时间
+     * @param bdate 较大的时间
      * @return 相差天数
      * @throws ParseException
      */
-    private int daysBetween(Date smdate,Date bdate)
-    {
-        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+    private int daysBetween(Date smdate, Date bdate) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         try {
-            smdate=sdf.parse(sdf.format(smdate));
-            bdate=sdf.parse(sdf.format(bdate));
+            smdate = sdf.parse(sdf.format(smdate));
+            bdate = sdf.parse(sdf.format(bdate));
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -316,9 +273,8 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         long time1 = cal.getTimeInMillis();
         cal.setTime(bdate);
         long time2 = cal.getTimeInMillis();
-        long between_days=(time2-time1)/(1000*3600*24);
+        long between_days = (time2 - time1) / (1000 * 3600 * 24);
 
         return Integer.parseInt(String.valueOf(between_days));
     }
-
 }
