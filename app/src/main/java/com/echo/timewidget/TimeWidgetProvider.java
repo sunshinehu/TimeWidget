@@ -15,7 +15,9 @@ import android.support.v8.renderscript.Allocation;
 import android.support.v8.renderscript.RenderScript;
 import android.support.v8.renderscript.ScriptIntrinsicBlur;
 import android.util.Log;
-import android.widget.RemoteViews;
+
+import com.google.gson.Gson;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,10 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 
 /**
  * Created by huchenxi on 2016/3/31.
@@ -43,6 +42,36 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         super();
     }
 
+    public static Bitmap GetLocalOrNetBitmap(String url) {
+        Log.d("download", url);
+        Bitmap bitmap = null;
+        InputStream in = null;
+        BufferedOutputStream out = null;
+        try {
+            in = new BufferedInputStream(new URL(url).openStream(), 1024);
+            final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
+            out = new BufferedOutputStream(dataStream, 1024);
+            copy(in, out);
+            out.flush();
+            byte[] data = dataStream.toByteArray();
+            bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            return bitmap;
+        } catch (Exception e) {
+            Log.d("download", e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private static void copy(InputStream in, OutputStream out) throws IOException {
+        byte[] b = new byte[1024];
+        int read;
+        while ((read = in.read(b)) != -1) {
+            out.write(b, 0, read);
+        }
+    }
+
+
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
@@ -55,9 +84,9 @@ public class TimeWidgetProvider extends AppWidgetProvider {
     public void onUpdate(final Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
-        if(mHandler==null){
-            mHandler=new TimeWidgetHandler(context);
-        }else{
+        if (mHandler == null) {
+            mHandler = new TimeWidgetHandler(context);
+        } else {
             mHandler.setContext(context);
         }
 
@@ -74,10 +103,14 @@ public class TimeWidgetProvider extends AppWidgetProvider {
             public void run() {
                 super.run();
                 if (current != day) {
-
+                    Bitmap bkg = null;
                     Log.d("Download", "start");
-                    Bitmap bkg = GetLocalOrNetBitmap("http://www.dujin.org/sys/bing/1920.php");
+                    try {
+                        String url = parseUrl();
+                        bkg = GetLocalOrNetBitmap(url);
+                    } catch (Exception e) {
 
+                    }
                     if (bkg != null) {
                         Log.d("bkg", "not null");
                         File file = new File(Environment.getExternalStorageDirectory().getPath() + "/wallpaper");
@@ -112,19 +145,19 @@ public class TimeWidgetProvider extends AppWidgetProvider {
                                 newFile.renameTo(file);
                             }
                         }
-                    }else{
+                    } else {
                         Log.d("bkg", "null");
                     }
 
                 }
-                Bitmap bitmap =doRender(context);
-                if(bitmap!=null){
+                Bitmap bitmap = doRender(context);
+                if (bitmap != null) {
                     Log.d("bitmap", "not null");
-                    Message msg =mHandler.obtainMessage();
-                    msg.obj=bitmap;
-                    msg.what=TimeWidgetHandler.UPDATE_VIEW;
+                    Message msg = mHandler.obtainMessage();
+                    msg.obj = bitmap;
+                    msg.what = TimeWidgetHandler.UPDATE_VIEW;
                     msg.sendToTarget();
-                }else{
+                } else {
                     Log.d("bitmap", "null");
                 }
             }
@@ -134,7 +167,7 @@ public class TimeWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId,
-        Bundle newOptions) {
+                                          Bundle newOptions) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
     }
 
@@ -158,44 +191,32 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         super.onRestored(context, oldWidgetIds, newWidgetIds);
     }
 
-    public static Bitmap GetLocalOrNetBitmap(String url) {
-        Log.d("download",url);
-        Bitmap bitmap = null;
-        InputStream in = null;
-        BufferedOutputStream out = null;
-        try {
-            in = new BufferedInputStream(new URL(url).openStream(), 1024);
-            final ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
-            out = new BufferedOutputStream(dataStream, 1024);
-            copy(in, out);
-            out.flush();
-            byte[] data = dataStream.toByteArray();
-            bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            return bitmap;
-        } catch (Exception e) {
-            Log.d("download",e.getMessage());
-            e.printStackTrace();
-            return null;
+    private String parseUrl() throws Exception {
+        InputStream is = new BufferedInputStream(new URL("http://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1").openStream(), 1024);
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int len = 0;
+        while ((len = is.read(data)) != -1) {
+            outStream.write(data, 0, len);
         }
+        is.close();
+        String content = new String(outStream.toByteArray());//通过out.Stream.toByteArray获取到写的数据
+        Log.d("test", content);
+        BingInfo bingInfo = new Gson().fromJson(content, BingInfo.class);
+        if (bingInfo != null && bingInfo.getImages() != null && bingInfo.getImages().size() > 0) {
+            return "http://cn.bing.com/" + bingInfo.getImages().get(0).getUrl();
+        }
+        return null;
     }
 
-    private static void copy(InputStream in, OutputStream out) throws IOException {
-        byte[] b = new byte[1024];
-        int read;
-        while ((read = in.read(b)) != -1) {
-            out.write(b, 0, read);
-        }
-    }
-
-
-    private Bitmap doRender(Context mContext){
+    private Bitmap doRender(Context mContext) {
 
 
         Bitmap bkg = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath() + "/wallpaper");
         if (bkg != null) {
             bkg = bkg.copy(Bitmap.Config.ARGB_8888, true);
-        }else{
-            bkg = BitmapFactory.decodeResource(mContext.getResources(),R.drawable.sun_flower);
+        } else {
+            bkg = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.sun_flower);
             bkg = bkg.copy(Bitmap.Config.ARGB_8888, true);
         }
 
@@ -228,7 +249,6 @@ public class TimeWidgetProvider extends AppWidgetProvider {
         return bkg;
 
     }
-
 
 
 }
